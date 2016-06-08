@@ -1,3 +1,4 @@
+# -*-coding:utf-8-*-
 '''import urllib.request
 
 url='http://wallstreetcn.com/'
@@ -10,21 +11,21 @@ with open ("in.txt",'wb') as f:
 import urllib.request
 
 def getHtml(url):
-    page = urllib.request.urlopen(url)
-    html = page.read()
-    return html
+	page = urllib.request.urlopen(url)
+	html = page.read()
+	return html
 
 def getImg(html):
-    reg = r'src="(.+?\.jpg)" pic_ext'
-    imgre = re.compile(reg)
-    imglist = re.findall(imgre,html)
-    return imglist      
+	reg = r'src="(.+?\.jpg)" pic_ext'
+	imgre = re.compile(reg)
+	imglist = re.findall(imgre,html)
+	return imglist      
    
 html = getHtml("http://tieba.baidu.com/p/2460150866")
 print(getImg(html))'''
 
 #coding=utf-8
-import urllib.request,re,sqlite3
+import urllib.request,re,sqlite3,time,random
 from datetime import datetime
 
 class Spider(object):
@@ -42,7 +43,13 @@ class Spider(object):
 def save_content(title,author,post_at,content,img,comment_count):
 		conn = sqlite3.connect('article.db')
 		conn.execute("INSERT INTO art (title,author,post_at,content,img,comment_count)values(?,?,?,?,?,?)",(title,author,post_at,content,img,comment_count))
+		result=conn.execute("SELECT* FROM art")
+		count=result.fetchall()
+		c=count[0]
+		print(c)
+		return list(result)
 		conn.close()
+
 def get_title(article1):
 	title = re.findall(r'<h1 class="article-title">(.*?)</h1>',article1,re.S)
 	return str(title[0])
@@ -62,7 +69,7 @@ def get_time(article3):
 
 def get_content(article4):
 	content=re.findall(r'<p>(.*?)</p>',article4,re.S)
-	return str(content[:-4])
+	return ''.join(content[:-4])
 
 def get_img(article5):
 	img=re.search(r'<img alt="(.*?)" src="(.*?!article\.foil)"',article5,re.M|re.I)
@@ -80,37 +87,42 @@ def get_comment(article6):
 
 def spider(url):
 	page = urllib.request.urlopen(url)
-	pages= page.read().decode('utf-8')
+	pages= page.read().decode('utf-8','ignore')
 	return pages
-
-def func(page):
-    url = "http://wallstreetcn.com/"
-    # get参数
-    data = {
-        "page":page
-    }
-    full_url=url+'node'+'/'+str(data['page'])
-    content = spider(full_url, data)
 
 if __name__ == '__main__':
 	try:
 		#url = "http://wallstreetcn.com/node/30"
 		#html=spider(url)
-		start = datetime.now()
-
-		start_page=26
-		end_page = 30
-
-		conn = sqlite3.connect('article.db')
-		conn.execute("drop table art")
-		conn.execute("CREATE TABLE art(title varchar(80) PRIMARY KEY not null, author varchar(10),post_at TEXT not null,content varchar(255) not null,img varchar(20) ,comment_count integer);")
-		conn.close() 
+		#conn = sqlite3.connect('article.db')
+		#conn.execute("drop table art")
+		#conn.execute("CREATE TABLE art(title varchar(80) PRIMARY KEY not null, author varchar(10),post_at TEXT not null,content varchar(255) not null,img varchar(20) ,comment_count integer);")
+		#conn.close()
 
 
-		for i in range(start_page, 28):
-			url = "http://wallstreetcn.com/"
-			full_url=url+'node'+'/'+str(i)
-			html=spider('http://wallstreetcn.com/node/247059')
+
+		#for i in random.sample(range(240, 2400),1):
+		for i in range(15,17):
+			try:
+				url = "http://wallstreetcn.com/"
+				full_url=url+'node'+'/'+str(i)
+				html=spider(full_url)
+				'''print('title:',get_title(html))
+				print('author:',get_author(html))
+				print('post_at:',get_time(html))
+				print('content:',get_content(html))
+				print('img:',get_img(html))'''
+				print('comment_count:',get_comment(html))
+				print('\n')
+				time.sleep(2)
+
+				#conn = sqlite3.connect('article.db')
+				#conn.execute("INSERT INTO art (title,author,post_at,content,img,comment_count)values(?,?,?,?,?,?)",(get_title(html),get_author(html),get_time(html),get_content(html),get_img(html),get_comment(html)))
+				print(save_content(get_title(html),get_author(html),get_time(html),get_content(html),get_img(html),get_comment(html)))
+				print('\n')
+			except Exception as e:
+				print(e)
+				continue
 
 			#save_content(get_title(html),get_author(html),get_time(html),get_content(html),get_img(html),get_comment(html))
 
@@ -120,14 +132,12 @@ if __name__ == '__main__':
 			print(get_content(html))
 			print(get_img(html))
 			print(get_comment(html),'\n')'''
-		conn = sqlite3.connect('article.db')
-		save_content(get_title(html),'get_author(html)',get_time(html),get_content(html),get_img(html),get_comment(html))
-		save_content(1,2,3,4,5,6)
-		result=conn.execute("SELECT* FROM art")
-		#print(list(result))
-		conn.close()
+		
+		#save_content(1,2,3,4,5,6)
+		#conn = sqlite3.connect('article.db')
+		
 
-		print('title:',get_title(html))
+		'''print('title:',get_title(html))
 		print('author:',get_author(html))
 		print('post_at:',get_time(html))
 		print('content:',get_content(html))
@@ -135,7 +145,7 @@ if __name__ == '__main__':
 		print('comment_count:',get_comment(html))
 	
 		with open('in.txt','w') as f:
-			f.writelines(html)
+			f.writelines(html)'''
 	except Exception as e:
 		print(e)
 		
