@@ -26,6 +26,8 @@ print(getImg(html))'''
 
 #coding=utf-8
 import urllib.request,re,sqlite3,time,random
+import threading,multiprocessing
+import urllib.error,socket
 from datetime import datetime
 
 class Spider(object):
@@ -44,9 +46,9 @@ def save_content(title,author,post_at,content,img,comment_count):
 		conn = sqlite3.connect('article.db')
 		conn.execute("INSERT INTO art (title,author,post_at,content,img,comment_count)values(?,?,?,?,?,?)",(title,author,post_at,content,img,comment_count))
 		result=conn.execute("SELECT* FROM art")
-		count=result.fetchall()
-		c=count[0]
-		print(c)
+		#count=result.fetchall()
+		#c=count[0]
+		#print(c)
 		return list(result)
 		conn.close()
 
@@ -85,13 +87,32 @@ def get_comment(article6):
 	else:
 		return int(comment_count[0])
 
-def spider(url):
-	page = urllib.request.urlopen(url)
-	pages= page.read().decode('utf-8','ignore')
-	return pages
+def spider():
+	for i in range(15,25):
+		try:
+			timeout = 20
+			socket.setdefaulttimeout(timeout)
+			url = "http://wallstreetcn.com/"
+			full_url=url+'node'+'/'+str(i)
+			page = urllib.request.urlopen(full_url)
+			pages= page.read().decode('utf-8','ignore')
+			print(save_content(get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)))
+			print('\n')
+			time.sleep(1)
+			#return get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)
+		except urllib.error.URLError as e:
+			print(e)
+			continue
+
+def main():
+	my_thread = multiprocessing.Process(target = spider)
+	my_thread.start()
+	my_thread.join()
+				
 
 if __name__ == '__main__':
-	try:
+	main()
+	'''try:
 		#url = "http://wallstreetcn.com/node/30"
 		#html=spider(url)
 		#conn = sqlite3.connect('article.db')
@@ -107,11 +128,15 @@ if __name__ == '__main__':
 				url = "http://wallstreetcn.com/"
 				full_url=url+'node'+'/'+str(i)
 				html=spider(full_url)
-				'''print('title:',get_title(html))
+
+				my_thread = threading.Thread(target = test_thread, args = (10, ))
+				my_thread.start()
+				my_thread.join()
+				print('title:',get_title(html))
 				print('author:',get_author(html))
 				print('post_at:',get_time(html))
 				print('content:',get_content(html))
-				print('img:',get_img(html))'''
+				print('img:',get_img(html))
 				print('comment_count:',get_comment(html))
 				print('\n')
 				time.sleep(2)
@@ -126,18 +151,9 @@ if __name__ == '__main__':
 
 			#save_content(get_title(html),get_author(html),get_time(html),get_content(html),get_img(html),get_comment(html))
 
-			'''print(get_title(html))
-			print(get_author(html))
-			print(get_time(html))
-			print(get_content(html))
-			print(get_img(html))
-			print(get_comment(html),'\n')'''
-		
-		#save_content(1,2,3,4,5,6)
-		#conn = sqlite3.connect('article.db')
-		
+			
 
-		'''print('title:',get_title(html))
+		print('title:',get_title(html))
 		print('author:',get_author(html))
 		print('post_at:',get_time(html))
 		print('content:',get_content(html))
@@ -145,9 +161,9 @@ if __name__ == '__main__':
 		print('comment_count:',get_comment(html))
 	
 		with open('in.txt','w') as f:
-			f.writelines(html)'''
+			f.writelines(html)
 	except Exception as e:
-		print(e)
+		print(e)'''
 		
 
 
