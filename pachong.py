@@ -1,58 +1,108 @@
 # -*-coding:utf-8-*-
-'''import urllib.request
 
-url='http://wallstreetcn.com/'
-data=urllib.request.urlopen(url).read()
-data=data.decode('utf-8')
-with open ("in.txt",'wb') as f:
-	f.writelines(data)'''
-
-'''import re
 import urllib.request
-
-def getHtml(url):
-	page = urllib.request.urlopen(url)
-	html = page.read()
-	return html
-
-def getImg(html):
-	reg = r'src="(.+?\.jpg)" pic_ext'
-	imgre = re.compile(reg)
-	imglist = re.findall(imgre,html)
-	return imglist      
-   
-html = getHtml("http://tieba.baidu.com/p/2460150866")
-print(getImg(html))'''
-
-#coding=utf-8
-import urllib.request,re,sqlite3,time,random
-import threading,multiprocessing
-import urllib.error,socket
+import re
+import sqlite3
+import time
+import random
+import threading
+import multiprocessing
+import urllib.error
+import socket
 from datetime import datetime
 
 class Spider(object):
-	"""docstring for Spider"""
-	def __init__(self):
-		self.page=1
-		self.url="http://wallstreetcn.com/node/246952"
-		
-	def get_page(self,cur_page):
-		url=self.url
-		page = urllib.request.urlopen(url)
-		cur_page = page.read().decode('utf-8')
-		return cur_page
+	def get_content(self,article):
+		title = re.findall(r'<h1 class="article-title">(.*?)</h1>',article,re.S)
+		author=re.search(r'<span class="item author">(.*?)target="_blank">(.*?)</a>(.*?)</span>',article,re.S)
+		post_at=re.findall(r'<span class="item time">(.*?)</span>',article,re.S)
+		time=post_at[0]
+		year=time[:4]
+		month=time[5:7]
+		day=time[8:10]
+		hour=time[12:]
+		content=re.findall(r'<p>(.*?)</p>',article,re.S)
+		img=re.search(r'<img alt="(.*?)" src="(.*?!article\.foil)"',article,re.M|re.I)
+		comment_count=re.findall(r'<span class="wscn-cm-counter">(.*?)</span>',article,re.S)
+		if img==None and comment_count[0]==None:
+			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),None,0
+		elif img!=None and comment_count[0]==None:
+			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),str(img.group(2)),0
+		elif img==None and comment_count[0]!=None:
+			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),None,int(comment_count[0])
+		else:
+			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),str(img.group(2)),int(comment_count[0])
 
-def save_content(title,author,post_at,content,img,comment_count):
+	def save_content(self,title,author,post_at,content,img,comment_count):
 		conn = sqlite3.connect('article.db')
 		conn.execute("INSERT INTO art (title,author,post_at,content,img,comment_count)values(?,?,?,?,?,?)",(title,author,post_at,content,img,comment_count))
 		result=conn.execute("SELECT* FROM art")
-		#count=result.fetchall()
+		cur = conn.cursor()
+		count=cur.fetchall()
 		#c=count[0]
-		#print(c)
+		print(count)
 		return list(result)
 		conn.close()
 
-def get_title(article1):
+	'''def spider(self):
+		for i in range(1999,2015):
+			try:
+				timeout = 20
+				socket.setdefaulttimeout(timeout)
+				url = "http://wallstreetcn.com/"
+				full_url=url+'node'+'/'+str(i)
+				page = urllib.request.urlopen(full_url)
+				pages= page.read().decode('utf-8','ignore')
+				lst=get_content(pages)
+				save_content(lst[0],lst[1],lst[2],lst[3],lst[4],lst[5])
+				#print(save_content(get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)))
+				print('Successfully Downloaded...\n')
+				time.sleep(1)
+				#return get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)
+			except urllib.error.URLError as e:
+				print(e)
+				continue
+
+
+	def main(self):
+		my_thread = threading.Thread(target = spider)
+		#my_thread = multiprocessing.Process(target = spider)
+		my_thread.start()
+		my_thread.join()'''
+
+
+def get_content(article):
+		title = re.findall(r'<h1 class="article-title">(.*?)</h1>',article,re.S)
+		author=re.search(r'<span class="item author">(.*?)target="_blank">(.*?)</a>(.*?)</span>',article,re.S)
+		post_at=re.findall(r'<span class="item time">(.*?)</span>',article,re.S)
+		time=post_at[0]
+		year=time[:4]
+		month=time[5:7]
+		day=time[8:10]
+		hour=time[12:]
+		content=re.findall(r'<p>(.*?)</p>',article,re.S)
+		img=re.search(r'<img alt="(.*?)" src="(.*?!article\.foil)"',article,re.M|re.I)
+		comment_count=re.findall(r'<span class="wscn-cm-counter">(.*?)</span>',article,re.S)
+		if img==None and comment_count[0]==None:
+			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),None,0
+		elif img!=None and comment_count[0]==None:
+			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),str(img.group(2)),0
+		elif img==None and comment_count[0]!=None:
+			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),None,int(comment_count[0])
+		else:
+			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),str(img.group(2)),int(comment_count[0])
+def save_content(title,author,post_at,content,img,comment_count):
+		conn = sqlite3.connect('article.db')
+		conn.execute("INSERT INTO art (title,author,post_at,content,img,comment_count)values(?,?,?,?,?,?)",(title,author,post_at,content,img,comment_count))
+		result=conn.execute("SELECT count(*) FROM art")
+		cur = conn.cursor()
+		count=cur.fetchall()
+		#c=count[0]
+		print(list(result))
+		#return list(result)
+		conn.close()
+
+'''def get_title(article1):
 	title = re.findall(r'<h1 class="article-title">(.*?)</h1>',article1,re.S)
 	return str(title[0])
 
@@ -85,10 +135,10 @@ def get_comment(article6):
 	if comment_count[0]==None:
 		return 0
 	else:
-		return int(comment_count[0])
+		return int(comment_count[0])'''
 
 def spider():
-	for i in range(15,25):
+	for i in range(1999,2015):
 		try:
 			timeout = 20
 			socket.setdefaulttimeout(timeout)
@@ -96,8 +146,10 @@ def spider():
 			full_url=url+'node'+'/'+str(i)
 			page = urllib.request.urlopen(full_url)
 			pages= page.read().decode('utf-8','ignore')
-			print(save_content(get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)))
-			print('\n')
+			lst=get_content(pages)
+			save_content(lst[0],lst[1],lst[2],lst[3],lst[4],lst[5])
+			#print(save_content(get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)))
+			print('Successfully Downloaded...\n')
 			time.sleep(1)
 			#return get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)
 		except urllib.error.URLError as e:
@@ -105,66 +157,18 @@ def spider():
 			continue
 
 def main():
+	#my_thread = threading.Thread(target = spider)
 	my_thread = multiprocessing.Process(target = spider)
 	my_thread.start()
 	my_thread.join()
 				
 
 if __name__ == '__main__':
+	a=Spider()
+
 	main()
-	'''try:
-		#url = "http://wallstreetcn.com/node/30"
-		#html=spider(url)
-		#conn = sqlite3.connect('article.db')
-		#conn.execute("drop table art")
-		#conn.execute("CREATE TABLE art(title varchar(80) PRIMARY KEY not null, author varchar(10),post_at TEXT not null,content varchar(255) not null,img varchar(20) ,comment_count integer);")
-		#conn.close()
 
 
-
-		#for i in random.sample(range(240, 2400),1):
-		for i in range(15,17):
-			try:
-				url = "http://wallstreetcn.com/"
-				full_url=url+'node'+'/'+str(i)
-				html=spider(full_url)
-
-				my_thread = threading.Thread(target = test_thread, args = (10, ))
-				my_thread.start()
-				my_thread.join()
-				print('title:',get_title(html))
-				print('author:',get_author(html))
-				print('post_at:',get_time(html))
-				print('content:',get_content(html))
-				print('img:',get_img(html))
-				print('comment_count:',get_comment(html))
-				print('\n')
-				time.sleep(2)
-
-				#conn = sqlite3.connect('article.db')
-				#conn.execute("INSERT INTO art (title,author,post_at,content,img,comment_count)values(?,?,?,?,?,?)",(get_title(html),get_author(html),get_time(html),get_content(html),get_img(html),get_comment(html)))
-				print(save_content(get_title(html),get_author(html),get_time(html),get_content(html),get_img(html),get_comment(html)))
-				print('\n')
-			except Exception as e:
-				print(e)
-				continue
-
-			#save_content(get_title(html),get_author(html),get_time(html),get_content(html),get_img(html),get_comment(html))
-
-			
-
-		print('title:',get_title(html))
-		print('author:',get_author(html))
-		print('post_at:',get_time(html))
-		print('content:',get_content(html))
-		print('img:',get_img(html))
-		print('comment_count:',get_comment(html))
-	
-		with open('in.txt','w') as f:
-			f.writelines(html)
-	except Exception as e:
-		print(e)'''
-		
 
 
 
