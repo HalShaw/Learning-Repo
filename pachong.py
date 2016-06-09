@@ -8,13 +8,15 @@ import random
 import threading
 import multiprocessing
 import urllib.error
-import socket
+import sys
 from datetime import datetime
 
-class Spider(object):
+class Article(object):
 	def __init__(self):
 		self.url="http://wallstreetcn.com/"
+
 	def get_content(self,article):
+		#使用正则表达式匹配出标题、作者、日期、内容、第一张大图的url、评论数
 		title = re.findall(r'<h1 class="article-title">(.*?)</h1>',article,re.S)
 		author=re.search(r'<span class="item author">(.*?)target="_blank">(.*?)</a>(.*?)</span>',article,re.S)
 		post_at=re.findall(r'<span class="item time">(.*?)</span>',article,re.S)
@@ -22,11 +24,11 @@ class Spider(object):
 		year=time[:4]
 		month=time[5:7]
 		day=time[8:10]
-		hour=time[12:]
+		hour=time[12:]#对有中文时间格式处理，返回值为datetime格式
 		content=re.findall(r'<p>(.*?)</p>',article,re.S)
 		img=re.search(r'<img alt="(.*?)" src="(.*?!article\.foil)"',article,re.M|re.I)
 		comment_count=re.findall(r'<span class="wscn-cm-counter">(.*?)</span>',article,re.S)
-		if img==None and comment_count[0]==None:
+		if img==None and comment_count[0]==None:#有可能文章没有图片和评论，考虑以下几种情况
 			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),None,0
 		elif img!=None and comment_count[0]==None:
 			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),str(img.group(2)),0
@@ -36,39 +38,35 @@ class Spider(object):
 			return str(title[0]),str(author.group(2)),datetime.strptime(year+'-'+month+'-'+day+' '+hour,'%Y-%m-%d %H:%M:%S'),''.join(content[:-4]),str(img.group(2)),int(comment_count[0])
 
 	def save_content(self,title,author,post_at,content,img,comment_count):
+		#连接并保存到数据库
 		conn = sqlite3.connect('article.db')
 		conn.execute("INSERT INTO art (title,author,post_at,content,img,comment_count)values(?,?,?,?,?,?)",(title,author,post_at,content,img,comment_count))
 		result=conn.execute("SELECT* FROM art")
-		cur = conn.cursor()
-		count=cur.fetchall()
-		#c=count[0]
-		print(count)
 		return list(result)
 		conn.close()
 
 	def spider(self):
-		for i in range(1999,2015):
+		#for i in range(19999,20002):
+		for i in random.sample(range(19999,20002),1):
 			try:
-				timeout = 20
-				socket.setdefaulttimeout(timeout)
-				#url = "http://wallstreetcn.com/"
-				full_url=self.url+'node'+'/'+str(i)
-				page = urllib.request.urlopen(full_url)
+				full_url=self.url+'node'+'/'+str(i)#URL格式
+				page = urllib.request.urlopen(full_url,timeout=10)#设置请求时间限制
 				pages= page.read().decode('utf-8','ignore')
 				lst=self.get_content(pages)
-				self.save_content(lst[0],lst[1],lst[2],lst[3],lst[4],lst[5])
-				#print(save_content(get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)))
+				self.save_content(lst[0],lst[1],lst[2],lst[3],lst[4],lst[5])#不打印出结果
+				#print(self.save_content(lst[0],lst[1],lst[2],lst[3],lst[4],lst[5]))#打印出结果
 				print('Successfully Downloaded...\n')
-				time.sleep(1)
-				#return get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)
+				time.sleep(2)
 			except urllib.error.URLError as e:
 				print(e)
 				continue
+				sys.exit()
 
 
 	def main(self):
-		my_thread = threading.Thread(target = self.spider)
-		#my_thread = multiprocessing.Process(target = spider)
+		#多线程和多进程爬取
+		#my_thread = threading.Thread(target = self.spider)#多线程
+		my_thread = multiprocessing.Process(target = self.spider)#多进程
 		my_thread.start()
 		my_thread.join()
 
@@ -166,8 +164,7 @@ def main():
 	'''			
 
 if __name__ == '__main__':
-	a=Spider()
-
+	a=Article()
 	a.main()
 
 
