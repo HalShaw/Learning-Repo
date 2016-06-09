@@ -12,6 +12,8 @@ import socket
 from datetime import datetime
 
 class Spider(object):
+	def __init__(self):
+		self.url="http://wallstreetcn.com/"
 	def get_content(self,article):
 		title = re.findall(r'<h1 class="article-title">(.*?)</h1>',article,re.S)
 		author=re.search(r'<span class="item author">(.*?)target="_blank">(.*?)</a>(.*?)</span>',article,re.S)
@@ -44,17 +46,17 @@ class Spider(object):
 		return list(result)
 		conn.close()
 
-	'''def spider(self):
+	def spider(self):
 		for i in range(1999,2015):
 			try:
 				timeout = 20
 				socket.setdefaulttimeout(timeout)
-				url = "http://wallstreetcn.com/"
-				full_url=url+'node'+'/'+str(i)
+				#url = "http://wallstreetcn.com/"
+				full_url=self.url+'node'+'/'+str(i)
 				page = urllib.request.urlopen(full_url)
 				pages= page.read().decode('utf-8','ignore')
-				lst=get_content(pages)
-				save_content(lst[0],lst[1],lst[2],lst[3],lst[4],lst[5])
+				lst=self.get_content(pages)
+				self.save_content(lst[0],lst[1],lst[2],lst[3],lst[4],lst[5])
 				#print(save_content(get_title(pages),get_author(pages),get_time(pages),get_content(pages),get_img(pages),get_comment(pages)))
 				print('Successfully Downloaded...\n')
 				time.sleep(1)
@@ -65,12 +67,12 @@ class Spider(object):
 
 
 	def main(self):
-		my_thread = threading.Thread(target = spider)
+		my_thread = threading.Thread(target = self.spider)
 		#my_thread = multiprocessing.Process(target = spider)
 		my_thread.start()
-		my_thread.join()'''
+		my_thread.join()
 
-
+'''
 def get_content(article):
 		title = re.findall(r'<h1 class="article-title">(.*?)</h1>',article,re.S)
 		author=re.search(r'<span class="item author">(.*?)target="_blank">(.*?)</a>(.*?)</span>',article,re.S)
@@ -102,7 +104,7 @@ def save_content(title,author,post_at,content,img,comment_count):
 		#return list(result)
 		conn.close()
 
-'''def get_title(article1):
+def get_title(article1):
 	title = re.findall(r'<h1 class="article-title">(.*?)</h1>',article1,re.S)
 	return str(title[0])
 
@@ -135,7 +137,7 @@ def get_comment(article6):
 	if comment_count[0]==None:
 		return 0
 	else:
-		return int(comment_count[0])'''
+		return int(comment_count[0])
 
 def spider():
 	for i in range(1999,2015):
@@ -161,12 +163,12 @@ def main():
 	my_thread = multiprocessing.Process(target = spider)
 	my_thread.start()
 	my_thread.join()
-				
+	'''			
 
 if __name__ == '__main__':
 	a=Spider()
 
-	main()
+	a.main()
 
 
 
